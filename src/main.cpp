@@ -28,15 +28,19 @@ int main(int argc, char **argv) {
     // Init GLFW
     LOG_INFO("Init GLFW")
     if (glfwInit() != GL_TRUE) {
-        LOG_ERROR("Failed to initialize GLFW");
+        LOG_FATAL("Failed to initialize GLFW");
         return -1;
     }
 
     auto window = setup_window();
+    if (!window) {
+        LOG_FATAL("Cannot setup window");
+        return -3;
+    }
 
     LOG_INFO("Load OpenGL functions")
     if (!gladLoadGL()) {
-        LOG_ERROR("Failed to load opengl");
+        LOG_FATAL("Failed to load opengl");
         return -2;
     }
 
@@ -66,6 +70,10 @@ int main(int argc, char **argv) {
 }
 
 GLFWwindow *setup_window() {
+    glfwSetErrorCallback([](int error, const char *description) {
+        LOG_ERROR("GLFW error(%d): %s", error, description);
+    });
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -127,6 +135,8 @@ void prepare_and_run_game_loop(GLFWwindow *window) {
     glfwGetFramebufferSize(window, &width, &height);
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     LOG_INFO("Start render loop")
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -137,11 +147,13 @@ void prepare_and_run_game_loop(GLFWwindow *window) {
         if (ui.close_requested()) {
             net.stop();
             LOG_INFO("Exit from application");
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(100ms);
             glfwSetWindowShouldClose(window, true);
         }
 
         //Non Ui related drawing
-        scene.render(cam.proj_view(), cam.y_axes_invert());
+        scene.update_and_render(cam.proj_view(), cam.y_axes_invert());
 
         // Cleanup opengl state
         glBindVertexArray(0);

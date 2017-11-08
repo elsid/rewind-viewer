@@ -40,7 +40,14 @@ public:
     void stop();
 
 private:
-    void process_json_message(const uint8_t *chunk_begin, const uint8_t *chunk_end);
+    std::vector<signed char> read_bytes(unsigned int byteCount);
+    uint32_t read_uint32();
+
+    uint32_t read_uint32(const signed char** iterator);
+    uint16_t read_int16(const signed char** iterator);
+    float read_float(const signed char** iterator);
+
+    void process_message(const std::vector<signed char>& package);
 
     Scene *scene_;
     std::unique_ptr<CPassiveSocket> socket_;

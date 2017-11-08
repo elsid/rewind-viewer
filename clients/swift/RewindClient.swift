@@ -5,10 +5,6 @@
  *  For each frame (game tick) rewind-viewer expect "end" command at frame end
  *  All objects should be represented as json string, 
  *  and will be decoded at viewer side to corresponding structures
- *
- *  Every object has mandatory field "type" and arbitrary number of additional fields
- *  For example end will looks like
- *      {"type": "end"}
  *  
  *  For available types see enum PrimitveType in <path to primitives here> 
  *
@@ -23,8 +19,10 @@
  *  Currently you should send object each frame to display it in viewer
  */
 
+#if ENABLE_REWIND_CLIENT
+
 public class RewindClient {
-  public static let instance = RewindClient(host: "127.0.0.1", port: 7000)!
+  public static let instance = RewindClient(host: "192.168.1.2", port: 7000)!
   
   public enum Color: UInt32 {
     case red   = 0xFF0000
@@ -34,23 +32,43 @@ public class RewindClient {
   }
   
   fileprivate let tc: TCPClient // просто для короткой запись, ибо писал в блокноте
+  fileprivate var bytes: [Byte] = []
   
   ///Should be send on end of move function
   ///all turn primitives can be rendered after that point
   public func endFrame() {
-    send("{\"type\":\"end\"}")
+    write(byte: Byte(bitPattern: 101/*e*/))
+    
+    tc.write(byte: Byte(bitPattern: 98/*b*/))
+    tc.write(int: bytes.count)
+    tc.write(bytes: bytes)
+    bytes.removeAll()
   }
   
-  public func circle(x: Double, y: Double, r: Double, color: UInt32) {
-    send("{\"type\": \"circle\", \"x\": \(x), \"y\": \(y), \"r\": \(r), \"color\": \(color)}")
+  public func circle(x: Double, y: Double, r: Double, color: Int32) {
+    write(byte: Byte(bitPattern: 99/*c*/))
+    write(float: Float(x))
+    write(float: Float(y))
+    write(float: Float(r))
+    write(int32: color)
   }
   
-  public func rect(x1: Double, y1: Double, x2: Double, y2: Double, color: UInt32) {
-    send("{\"type\": \"rectangle\", \"x1\": \(x1), \"y1\": \(y1), \"x2\": \(x2), \"y2\": \(y2), \"color\": \(color)}")
+  public func rect(x1: Double, y1: Double, x2: Double, y2: Double, color: Int32) {
+    write(byte: Byte(bitPattern: 114/*r*/))
+    write(float: Float(x1))
+    write(float: Float(y1))
+    write(float: Float(x2))
+    write(float: Float(y2))
+    write(int32: color)
   }
   
-  public func line(x1: Double, y1: Double, x2: Double, y2: Double, color: UInt32) {
-    send("{\"type\": \"line\", \"x1\": \(x1), \"y1\": \(y1), \"x2\": \(x2), \"y2\": \(y2), \"color\": \(color)}")
+  public func line(x1: Double, y1: Double, x2: Double, y2: Double, color: Int32) {
+    write(byte: Byte(bitPattern: 108/*l*/))
+    write(float: Float(x1))
+    write(float: Float(y1))
+    write(float: Float(x2))
+    write(float: Float(y2))
+    write(int32: color)
   }
   
   ///Living unit - circle with HP bar
@@ -60,11 +78,30 @@ public class RewindClient {
   ///course - parameter needed only to properly rotate textures (it unused by untextured units)
   ///unit_type - define used texture, value 0 means 'no texture'. For supported textures see enum UnitType in Frame.h
   public func livingUnit(x: Double, y: Double, r: Double, hp: Int, maxHP: Int, enemy: Int, course: Double = 0, utype: Int = 0) {
-    send("{\"type\": \"unit\", \"x\": \(x), \"y\": \(y), \"r\": \(r), \"hp\": \(hp), \"max_hp\": \(maxHP), \"enemy\": \(enemy), \"unit_type\": \(utype), \"course\": \(course)}")
+    write(byte: Byte(bitPattern: 117/*u*/))
+    write(float: Float(x))
+    write(float: Float(y))
+    write(float: Float(r))
+    write(int32: Int32(hp))
+    write(int32: Int32(maxHP))
+    write(short: Int16(utype))
+    write(short: Int16(enemy))
+    write(float: Float(course))
   }
   
   public func message(_ msg: String) {
-    send("{\"type\": \"message\", \"message\": \(msg)}")
+    write(byte: Byte(bitPattern: 109/*m*/))
+    
+    let bytes = msg.utf8.map{ Byte(bitPattern: $0) }
+    write(int32: Int32(bytes.count))
+    self.bytes.append(contentsOf: bytes)
+  }
+  
+  public func area(_ x: Int, y: Int, atype: Int) {
+    write(byte: Byte(bitPattern: 97/*a*/))
+    write(int32: Int32(x))
+    write(int32: Int32(y))
+    write(short: Int16(atype))
   }
   
   init?(host: String, port: Int) {
@@ -75,7 +112,35 @@ public class RewindClient {
     }
   }
   
-  private func send(_ str: String) {
-    tc.write(bytes: str.utf8.map{ Byte(bitPattern: $0) })
+  private func write(byte value: Byte) {
+    bytes.append(value)
+  }
+  
+  private func write(float value: Float) {
+    write(int32: fromByteArray(toByteArray(value)) as Int32)
+  }
+  
+  private func write(int32 value: Int32) {
+    bytes.append(contentsOf: toByteArray(value.littleEndian))
+  }
+  
+  private func write(short value: Int16) {
+    bytes.append(contentsOf: toByteArray(value.littleEndian))
+  }
+  
+}
+
+
+private func toByteArray<T>(_ value: T) -> [Byte] {
+  var value = value
+  return withUnsafeBytes(of: &value) {  $0.map{ Byte(bitPattern:$0) } }
+}
+
+private func fromByteArray<T>(_ value: [Byte]) -> T {
+  return value.withUnsafeBytes {
+    $0.baseAddress!.load(as: T.self)
   }
 }
+
+  
+#endif

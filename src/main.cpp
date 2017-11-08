@@ -13,7 +13,7 @@
 #include <thread>
 
 constexpr size_t DEFAULT_WIN_WIDTH = 1200;
-constexpr size_t DEFAULT_WIN_HEIGHT = 800;
+constexpr size_t DEFAULT_WIN_HEIGHT = 990;
 
 constexpr const char *WINDOW_TITLE = "Rewind viewer for Russian AI Cup";
 
@@ -79,6 +79,9 @@ GLFWwindow *setup_window() {
 
     LOG_INFO("Create main window")
     GLFWwindow *window = glfwCreateWindow(DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT, WINDOW_TITLE, nullptr, nullptr);
+    assert(nullptr != window);
+
+    glfwSetWindowPos(window, 1280+80, 30);
 
     int width;
     int height;
@@ -98,7 +101,7 @@ GLFWwindow *setup_window() {
 
 void prepare_and_run_game_loop(GLFWwindow *window) {
     LOG_INFO("Create camera")
-    Camera cam({730.0f, 445.0f}, 1000);
+    Camera cam({690.0f, 528.0f}, 1150);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     LOG_INFO("Create Resource manager")
@@ -110,7 +113,7 @@ void prepare_and_run_game_loop(GLFWwindow *window) {
 
     //Start network listening
     LOG_INFO("Start networking thread")
-    NetListener net(&scene, "127.0.0.1", 7000);
+    NetListener net(&scene, "192.168.1.2", 7000);
     std::thread network_thread([&net] {
         try {
             net.run();

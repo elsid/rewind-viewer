@@ -62,7 +62,7 @@ Scene::Scene(ResourceManager *res)
 
     //Load textures
     LOG_INFO("Load background texture")
-    attr_->grass_tex = mgr_->load_texture("resources/textures/grass_seamless.jpg", false, GL_REPEAT, GL_REPEAT);
+    attr_->grass_tex = mgr_->load_texture("resources/textures/normal.jpg", false, GL_REPEAT, GL_REPEAT);
 
     //Unit textures
     LOG_INFO("Load unit textures")

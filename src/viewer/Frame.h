@@ -27,16 +27,15 @@ struct Frame {
         helicopter = 1,
         tank = 2,
         fighter = 3,
+
         count
     };
-
     enum class AreaType {
         unknown = 0,
         forest,
         swamp,
         rain,
         cloud,
-        count
     };
 
     std::vector<pod::Circle> circles;
@@ -85,5 +84,6 @@ struct AreaDesc {
     int y;
     Frame::AreaType type;
 };
+
 
 } // namespace pod

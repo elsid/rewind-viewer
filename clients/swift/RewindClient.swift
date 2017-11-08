@@ -19,10 +19,8 @@
  *  Currently you should send object each frame to display it in viewer
  */
 
-#if ENABLE_REWIND_CLIENT
-
 public class RewindClient {
-  public static let instance = RewindClient(host: "192.168.1.2", port: 7000)!
+  public static let instance = RewindClient(host: "127.0.0.1", port: 7000)!
   
   public enum Color: UInt32 {
     case red   = 0xFF0000
@@ -141,6 +139,3 @@ private func fromByteArray<T>(_ value: [Byte]) -> T {
     $0.baseAddress!.load(as: T.self)
   }
 }
-
-  
-#endif

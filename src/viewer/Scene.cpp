@@ -173,9 +173,8 @@ void Scene::add_frame(std::unique_ptr<Frame> &&frame) {
 }
 
 void Scene::add_area_description(pod::AreaDesc area) {
-    terrains_.push_back(area);
+    terrains_.emplace_back(area);
 }
-
 void Scene::show_detailed_info(const glm::vec2 &mouse) const {
     if (!opt_.show_detailed_info_on_hover || frames_.empty()) {
         return;

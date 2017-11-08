@@ -87,8 +87,9 @@ GLFWwindow *setup_window() {
 
     LOG_INFO("Create main window")
     GLFWwindow *window = glfwCreateWindow(DEFAULT_WIN_WIDTH, DEFAULT_WIN_HEIGHT, WINDOW_TITLE, nullptr, nullptr);
-    assert(nullptr != window);
-
+    if (!window) {
+        return nullptr;
+    }
     glfwSetWindowPos(window, 1280+80, 30);
 
     int width;
@@ -121,7 +122,7 @@ void prepare_and_run_game_loop(GLFWwindow *window) {
 
     //Start network listening
     LOG_INFO("Start networking thread")
-    NetListener net(&scene, "192.168.1.2", 7000);
+    NetListener net(&scene, "127.0.0.1", 7000);
     std::thread network_thread([&net] {
         try {
             net.run();

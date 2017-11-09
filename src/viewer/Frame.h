@@ -23,19 +23,19 @@ struct Unit;
  */
 struct Frame {
     enum class UnitType {
-        undefined = 0,
-        helicopter = 1,
-        tank = 2,
-        fighter = 3,
-
-        count
+        undefined = -1,
+        arrv = 0,
+        fighter = 1,
+        helicopter = 2,
+        ifv = 3,
+        tank = 4,
     };
     enum class AreaType {
-        unknown = 0,
-        forest,
-        swamp,
-        rain,
-        cloud,
+        undefined = -1,
+        forest = 0, // terrain
+        swamp = 1, // terrain
+        rain = 2, // wether
+        cloud = 3, // wether
     };
 
     std::vector<pod::Circle> circles;

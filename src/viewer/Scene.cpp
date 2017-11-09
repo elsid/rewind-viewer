@@ -62,23 +62,25 @@ Scene::Scene(ResourceManager *res)
 
     //Load textures
     LOG_INFO("Load background texture")
-    attr_->grass_tex = mgr_->load_texture("resources/textures/grass.png", false, GL_REPEAT, GL_REPEAT);
+    attr_->grass_tex = mgr_->load_texture("resources/textures/grow.jpg", false, GL_REPEAT, GL_REPEAT);
 
     //Unit textures
     LOG_INFO("Load unit textures")
-    unit2tex_[Frame::UnitType::helicopter] = mgr_->load_texture("resources/textures/helicopter.png", false);
-    unit2tex_[Frame::UnitType::tank] = mgr_->load_texture("resources/textures/tank.png", false);
+    unit2tex_[Frame::UnitType::arrv] = mgr_->load_texture("resources/textures/arrv.png", false);
     unit2tex_[Frame::UnitType::fighter] = mgr_->load_texture("resources/textures/fighter.png", false);
+    unit2tex_[Frame::UnitType::helicopter] = mgr_->load_texture("resources/textures/helicopter.png", false);
+    unit2tex_[Frame::UnitType::ifv] = mgr_->load_texture("resources/textures/ifv.png", false);
+    unit2tex_[Frame::UnitType::tank] = mgr_->load_texture("resources/textures/tank.png", false);
+    
 
     //AreaDesc textures
-    terrain2tex_[Frame::AreaType::forest] = mgr_->load_texture("resources/textures/forest.png",
-                                                                 true, GL_REPEAT, GL_REPEAT, GL_LINEAR_MIPMAP_NEAREST);
-    terrain2tex_[Frame::AreaType::swamp] = mgr_->load_texture("resources/textures/swamp.png",
+    terrain2tex_[Frame::AreaType::forest] = mgr_->load_texture("resources/textures/forest.png", false, GL_REPEAT, GL_REPEAT);
+    terrain2tex_[Frame::AreaType::swamp] = mgr_->load_texture("resources/textures/water.jpg",
                                                                 true, GL_REPEAT, GL_REPEAT);
-    terrain2tex_[Frame::AreaType::cloud] = mgr_->load_texture("resources/textures/clouds.png",
-                                                                true, GL_REPEAT, GL_REPEAT);
-    terrain2tex_[Frame::AreaType::rain] = mgr_->load_texture("resources/textures/rain.png",
-                                                               true, GL_REPEAT, GL_REPEAT);
+
+    terrain2tex_[Frame::AreaType::cloud] = mgr_->load_texture("resources/textures/cloud.png", false, GL_REPEAT, GL_REPEAT);
+
+    terrain2tex_[Frame::AreaType::rain] = mgr_->load_texture("resources/textures/rain.png", false, GL_REPEAT, GL_REPEAT);
 
     //Preload rectangle to memory for further drawing
     LOG_INFO("Create rectangle for future rendering")
@@ -126,6 +128,7 @@ void Scene::update_and_render(const glm::mat4 &proj_view, int y_axes_invert) {
     //Update world origin position
     y_axes_invert_ = y_axes_invert;
 
+    
     //Update current frame
     {
         std::lock_guard<std::mutex> f(frames_mutex_);
@@ -134,6 +137,9 @@ void Scene::update_and_render(const glm::mat4 &proj_view, int y_axes_invert) {
             active_frame_ = frames_[cur_frame_idx_].get();
         }
     }
+
+    // Area Down
+    render_terrain(false);
 
     //Update projection matrix
     glBindBuffer(GL_UNIFORM_BUFFER, attr_->uniform_buf);
@@ -157,14 +163,13 @@ void Scene::update_and_render(const glm::mat4 &proj_view, int y_axes_invert) {
     glBindVertexArray(attr_->rect_vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    //AreaDesc
-    render_terrain();
-
-    //Frame
-    if (!frames_.empty()) {
-        const Frame *frame = frames_[cur_frame_idx_].get();
-        render_frame(*frame);
+    //Update current frame
+    if (nullptr != active_frame_) {
+       render_frame(*active_frame_);
     }
+
+    // Area up
+    render_terrain(true);
 }
 
 void Scene::add_frame(std::unique_ptr<Frame> &&frame) {
@@ -173,6 +178,7 @@ void Scene::add_frame(std::unique_ptr<Frame> &&frame) {
 }
 
 void Scene::add_area_description(pod::AreaDesc area) {
+    std::lock_guard<std::mutex> f(terrain_mutex_);
     terrains_.emplace_back(area);
 }
 void Scene::show_detailed_info(const glm::vec2 &mouse) const {
@@ -197,7 +203,9 @@ void Scene::show_detailed_info(const glm::vec2 &mouse) const {
     }
 }
 
-void Scene::render_terrain() {
+void Scene::render_terrain(bool up) {
+    std::lock_guard<std::mutex> f(terrain_mutex_);
+
     if (terrains_.empty()) {
         return;
     }
@@ -207,9 +215,18 @@ void Scene::render_terrain() {
     shaders_->textured.set_vec2("tex_scale", glm::vec2(1.0f, y_axes_invert_));
     glBindVertexArray(attr_->rect_vao);
     for (const auto &tm : terrains_) {
+        bool isUp = tm.type == Frame::AreaType::forest || tm.type == Frame::AreaType::rain || tm.type == Frame::AreaType::cloud;
+
+        if (up != isUp) {
+            continue;
+        }
+
         float z = -0.1f;
-        if (tm.type == Frame::AreaType::rain || tm.type == Frame::AreaType::cloud) {
-            z += 0.05f;
+
+        if (tm.type == Frame::AreaType::forest) {
+            z = 0.2f;
+        } else if (tm.type == Frame::AreaType::rain || tm.type == Frame::AreaType::cloud) {
+            z = 0.3f;
         }
 
         auto model = glm::translate(glm::mat4(1.0), {cell_dim.x * tm.x, cell_dim.y * tm.y, z});
@@ -362,7 +379,15 @@ void Scene::render_unit(const pod::Unit &unit) {
     } else {
         shaders_->circle.set_int("textured", 0);
     }
+
+    if (unit.utype == Frame::UnitType::fighter || unit.utype == Frame::UnitType::helicopter) {
+        model = glm::translate(model, {0, 0, 0.15f});
+    } else {
+        model = glm::translate(model, {0, 0, 0.05f});
+    }
+
     model = glm::scale(model, glm::vec3{unit.radius, unit.radius, 0.0f});
+
     shaders_->circle.set_vec3("center", vcenter);
     shaders_->circle.set_mat4("model", model);
 

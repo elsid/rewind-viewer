@@ -59,7 +59,7 @@ private:
         bool show_detailed_info_on_hover = true;
     };
 
-    void render_terrain();
+    void render_terrain(bool up);
     void render_frame(const Frame &frame);
     void render_grid();
     void render_circle(const pod::Circle &circle);
@@ -82,11 +82,13 @@ private:
     int frames_count_ = 0;
     Frame *active_frame_ = nullptr;
 
+
     std::map<Frame::UnitType, GLuint> unit2tex_;
     std::map<Frame::AreaType, GLuint> terrain2tex_;
 
     ///From camera, to properly draw hp bars above units
     int y_axes_invert_;
 
+    std::mutex terrain_mutex_;
     std::vector<pod::AreaDesc> terrains_;
 };

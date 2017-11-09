@@ -106,7 +106,7 @@ namespace pod {
     }
 
     void to_unit(uint32_t hp, uint32_t max_hp, int16_t utype, int16_t is_enemy, float course, Unit &p) {
-        static const glm::vec3 our_color { 0.0f, 0.0f, 1.0f };
+        static const glm::vec3 our_color { 0.0f, 0.5f, 1.0f };
         static const glm::vec3 enemy_color { 1.0f, 0.0f, 0.0f };
         static const glm::vec3 neutral_color { 0.5f, 0.5f, 0.0f };
 
@@ -120,12 +120,7 @@ namespace pod {
 
         p.hp = hp;
         p.max_hp = max_hp;
-
-        if (0 <= utype && utype < static_cast<int16_t>(Frame::UnitType::count)) {
-            p.utype = static_cast<Frame::UnitType>(utype);
-        } else {
-            p.utype = Frame::UnitType::undefined;
-        }
+        p.utype = static_cast<Frame::UnitType>(utype);
 
         p.course = course;
     }
@@ -229,7 +224,7 @@ void NetListener::process_message(const std::vector<signed char>& package) {
             {
                 LOG_DEBUG("NetClient::Area");
                 auto area = pod::AreaDesc();
-                auto x = read_float(&iter); auto y = read_float(&iter); auto type = read_int16(&iter);
+                auto x = read_uint32(&iter); auto y = read_uint32(&iter); auto type = read_int16(&iter);
                 pod::to_area(x, y, type, area);
 
                 scene_->add_area_description(area);
@@ -319,7 +314,7 @@ uint16_t NetListener::read_int16(const signed char** iterator) {
         buf[1] = *(*iterator + 1);
     }
 
-    *iterator += 4;
+    *iterator += 2;
 
     int16_t value;
     memcpy(&value, &buf[0], 2);

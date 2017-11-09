@@ -22,7 +22,7 @@ void prepare_and_run_game_loop(GLFWwindow *window);
 
 int main(int argc, char **argv) {
     loguru::init(argc, argv);
-    loguru::add_file("rewindviewer-debug.log", loguru::Truncate, loguru::Verbosity_MAX);
+    //loguru::add_file("rewindviewer-debug.log", loguru::Truncate, loguru::Verbosity_MAX);
     loguru::add_file("rewindviewer.log", loguru::Truncate, loguru::Verbosity_INFO);
 
     // Init GLFW
@@ -122,7 +122,7 @@ void prepare_and_run_game_loop(GLFWwindow *window) {
 
     //Start network listening
     LOG_INFO("Start networking thread")
-    NetListener net(&scene, "127.0.0.1", 7000);
+    NetListener net(&scene, "192.168.1.2", 7000);
     std::thread network_thread([&net] {
         try {
             net.run();
